@@ -2,17 +2,15 @@ function load_scene_params
   common scene_settings, settings
   
   ;Loads parameters need for scene generation procedures
-  ;May later wish to add functionality so that it will pull fov, num_pixels, lambda from load_instrument_params?
+  
   
   ;;fundamental constants
   ;-------------------------------------------------------------------------------------------------------
-    pi = 3.141592653D
-    deg = 180/pi
-    km_au = 1.496*(10^8)
+    km_au = 1.496d8
 
   ;;Stellar Parameters (Will want to make a library for the next three sections for when tyring multiple systems)
   ;--------------------------------------------------------------------------------------------------------
-    ;starname = 'Epsilon_Eridani' (Named star in Zodipic, but updated data)
+    starname = 'Epsilon_Eridani' ;(Named star in Zodipic, but updated data)
     rstar = 0.98D
     lstar = 0.30D
     dist = 3.218D; Hipparcos
@@ -24,8 +22,7 @@ function load_scene_params
     phi = 0.0D
     gk = 4.75D  ;Drake, S. & Smith, G., ApJ, 412, 797
     zk = -0.09D ;Drake, S. & Smith, G., ApJ, 412, 797
-    zodis = 1000D ; ??
-    dust_albedo = 0.56D ;Consult DIRBE Model
+    zodis = 100D ; ??
     
     radin = 3.0D ; AU
     radout = 5.0D ; AU
@@ -53,42 +50,46 @@ function load_scene_params
     
     plan_albedo = 0.4D ;
     plan_rad = 69.911/km_au ; AU
+    
+    tplan = 150D ; Kelvin
      
     
   ;Instrument Parameters
   ;-----------------------------------------------------------------------------------------
   
-    fov = 10.0D ; Arcseconds?
-    num_pixels = 100.0D ; Pixels/line
+    inst = load_inst_params()
+  
+    fov = inst.fov ; Arcseconds?
+    num_pixels = 100 ; Pixels/line
     size_pixels = fov/num_pixels ; Angular size of pixels
-    lambda = 0.4D ; Microns
+    lambda = inst.lambda ; Microns
+
   
   ;Upsampling for image and correcting image size for Zodipic
   ;------------------------------------------------------------------------------------------
   
     upsample = 2
     
-    num_pixels = upsample*num_pixels 
+    pixnum = upsample*num_pixels 
   
-    rounder = num_pixels MOD 16 ;pixnum must be divisible by 16 for zodipic
+    rounder = pixnum MOD 16 ;pixnum must be divisible by 16 for zodipic
     if BOOLEAN(rounder) THEN BEGIN 
-      if (rounder GT 8) || (rounder EQ 8) THEN pixnum = num_pixels + (16 - rounder) $
-      else pixnum = num_pixels - rounder
+      if (rounder GE 8) THEN pixnum += (16 - rounder) $
+      else pixnum -= rounder
     endif
     
-    pixsize = size_pixels*(num_pixels/pixnum) ;Size of pixels in Zodipic to maintain FOV)
-    
+    apixsize = fov/pixnum ;Size of pixels in arcseconds
+    lpixsize = apixsize * dist ; Size of pixels on image (AU)
     
     ;;Combine into single settings block
     ;--------------------------------------------------------------------------------------
     
     settings = {$
-      ;Fundamental
-      pi: pi, $
-      deg: deg, $
+      ;Fundamental/Unit
       km_au: km_au, $
       
       ;Stellar
+      starname:starname, $
       rstar: rstar, $
       lstar: lstar, $
       dist: dist, $
@@ -99,7 +100,6 @@ function load_scene_params
       gk: gk, $
       zk: zk, $
       zodis: zodis, $
-      dust_albedo: dust_albedo, $
       radin: radin, $
       radout: radout, $
       ring: ring, $
@@ -120,6 +120,7 @@ function load_scene_params
       jd0: jd0, $
       plan_albedo: plan_albedo, $
       plan_rad: plan_rad, $
+      tplan:tplan, $
       
       ;Instrument
       fov: fov, $
@@ -127,7 +128,8 @@ function load_scene_params
       size_pixels: size_pixels, $
       lambda: lambda, $
       pixnum: pixnum, $
-      pixsize: pixsize $
+      apixsize: apixsize, $
+      lpixsize:lpixsize $
       }
     
     return, settings
